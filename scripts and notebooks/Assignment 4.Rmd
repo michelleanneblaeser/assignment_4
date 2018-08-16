@@ -1,0 +1,52 @@
+---
+title: "Assignment 4"
+output: html_notebook
+---
+Question 3:
+Load the training (2014) and test (2015) data sets
+```{r}
+load("../data/eye_FR_testdata-1")
+load("../data/eye_FR_traindata-1")
+```
+Load tidyverse and Magrittr
+```{r}
+library(tidyverse)
+library(magrittr)
+```
+Step 1: Investigate the distribution of continuous variables in training data
+Graph 1: Confidence (confidence)
+Graph 2: Response time (lineuprt)
+```{r}
+ggplot(data = traindata, mapping = aes(x = confidence))+
+  geom_histogram(binwidth = 8)
+  
+ggplot(data = traindata, mapping = aes(x = lineuprt))+
+  geom_histogram()
+
+  
+```
+Step 2:
+Test whether lineup response time (lineuprt) is predictive of eyewitness accuracy(lineupacc), faceted by whether the target is present (TP) or absent (TA)(linuptpta)
+```{r}
+ggplot(data = traindata, mapping = aes(x = lineuprt, y = lineupacc))+
+  geom_jitter(alpha = 0.2)+
+  geom_smooth()+
+  facet_wrap(~lineuptpta)
+```
+Step 3: transform response time (lineuprt) to correct for the skew
+```{r}
+lineuprt_log <- (log10(traindata$lineuprt))
+```
+Step 4: Investigate distribution for log10 transformation of response time (lineuprt_log)
+```{r}
+ggplot(data = traindata, mapping = aes(x = lineuprt_log))+
+  geom_histogram()
+```
+Step 5: Retest whether the transformed lineup response time (lineuprt_log) is predictive of eyewitness accuracy(lineupacc), faceted by whether the target is present (TP) or absent (TA)(linuptpta)
+```{r}
+ggplot(data = traindata, mapping = aes(x = lineuprt_log, y = lineupacc))+
+  geom_jitter(alpha = 0.2)+
+  geom_smooth()+
+  facet_wrap(~lineuptpta)
+```
+
