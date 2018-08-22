@@ -8,7 +8,7 @@ Load the training (2014) and test (2015) data sets
 load("../data/eye_FR_testdata-1")
 load("../data/eye_FR_traindata-1")
 ```
-Load tidyverse, Magrittr, Psych, and vcd
+Load tidyverse, Magrittr, Psych, caret, and vcd
 ```{r}
 library(tidyverse)
 library(magrittr)
@@ -16,8 +16,11 @@ install.packages("psych")
 library(psych)
 install.packages("vcd")
 library(vcd)
+install.packages("caret")
+library(caret)
 ```
-Step 1: Describe eyewitness accuracy (lineupacc) in training data set
+Question 3:
+ 1: Describe eyewitness accuracy (lineupacc) in training data set, as well as the properties of the other variables.
 ```{r}
 traindata %>%  
     describe     
@@ -60,7 +63,7 @@ ggplot(data = traindata, mapping = aes(x = lineuprt_log))+
 ```
 Table 1 indicates that the unacceptable levels of skewness and kurtosis have been resolved with a log10 transformation. Graph 1 confirms this, although it appears there are still some outliers.
 ____________________________________________________________________________
-Step 4: Test whether 1)confidence of response (confidence) is predictive of lineup accuracy (lineupacc), and 2)the transformed lineup response time (lineuprt_log) is predictive of eyewitness accuracy(lineupacc)
+Step 4: Test whether 1)confidence of response (confidence) is predictive of lineup accuracy (lineupacc), and 2)the transformed lineup response time (lineuprt_log) is predictive of eyewitness accuracy(lineupacc). These relationships will then each be faceted by target presence (lineuptpta), and length of initail exposure to target (exposure), to investigate whether these factors influence the abovementioned relationships.
 ```{r}
 ggplot(traindata, aes(x = confidence, y = lineupacc))+
   geom_point()+
@@ -73,18 +76,147 @@ ggplot(traindata, aes(x = lineuprt_log, y = lineupacc))+
     geom_jitter(height = .1, alpha = 0.3)+
     geom_smooth(method = "glm",
                 se = F)
+ggplot(traindata, aes(x = confidence, y = lineupacc))+
+  geom_point()+
+    geom_jitter(height = .1, alpha = 0.3)+
+    geom_smooth(method = "glm",
+                se = F)+
+  facet_wrap(~lineuptpta)
+
+ggplot(traindata, aes(x = lineuprt_log, y = lineupacc))+
+  geom_point()+
+    geom_jitter(height = .1, alpha = 0.3)+
+    geom_smooth(method = "glm",
+                se = F)+
+facet_wrap(~lineuptpta)
+
+ggplot(traindata, aes(x = confidence, y = lineupacc))+
+  geom_point()+
+    geom_jitter(height = .1, alpha = 0.3)+
+    geom_smooth(method = "glm",
+                se = F)+
+  facet_wrap(~exposure)
+
+ggplot(traindata, aes(x = lineuprt_log, y = lineupacc))+
+  geom_point()+
+    geom_jitter(height = .1, alpha = 0.3)+
+    geom_smooth(method = "glm",
+                se = F)+
+  facet_wrap(~exposure)
 
 ```
-Graph 1 suggestss that the more confident a participant is in their response, the more likely it is that they have given a correct reponse.
-Graph 2 sugests that the longer it takes a participant to give a response, the less likely it is that they have given a correct response.
+Graph 1 suggests that the more confident a participant is in their response overall, the more likely it is that they have given a correct reponse.
+Graph 2 sugests that the longer it takes a participant to give a response overall, the less likely it is that they have given a correct response.
 
+Graph 3 suggests that the effect of confidence on accuracy is much stronger in target absence lineups than in target present lineups
+Graph 4 suggests that the length of response time affects lineup accuracy negatively only in target absent lineups. This effect is almost null in target present lineups. 
 
+Graph 5 suggests that the effect of confidence on accuracy is slightly stronger in the long video condition than in the short video condition (which is very weak)
+Graph 6 suggests that length of response time negatively affects lineup accuracy for both the long and short video conditions
 
+To summarise:
+The more confident a participant is in their response, the more likely they are to be correct, specifically in a) target absent lineups, and b) when they had a longer initial exposure to the target (in the simulated crime video)
+The longer it takes a participant to give their response to the lineup, the less likely they are to be correct, however only in target absent lineups, regardless of the initial length of exposure to the target
+________________________________________________________________________
+Question 4:
+Step 1: Check whether lineup accuracy is predicted by confidence and response time (respectively)
+```{r}
+accuracy_model1 <- glm(lineupacc ~ confidence,
+      family = "binomial", data = traindata)
+summary(accuracy_model1)
 
+accuracy_model2 <- glm(lineupacc ~ lineuprt_log,
+      family = "binomial", data = traindata)
+summary(accuracy_model2)
+```
+The above logistic regressions indicate that overall: confidence is significantly predictive of response accuracy, but response time is not
+________________________________________________________________________
+Step 2: Check whether these findings hold true over and above what is already accounted for by the 2 conditions (target present/absent and exposure)
+```{r}
+accuracy_model3 <- glm(lineupacc ~ lineuptpta + exposure + confidence,
+      family = "binomial", data = traindata)
+summary(accuracy_model3)
+accuracy_model4 <- glm(lineupacc ~ lineuptpta + exposure + lineuprt_log,
+      family = "binomial", data = traindata)
+summary(accuracy_model4)
+```
+Both the presence/absence of the target and the length of initial exposure to the target are significantly predictive of lineup accuracy. Neither confidence nor response time significantly adds to this model
+__________________________________________________________________________
+Step 3: Check whether automatic recognition or face comparison add to the model over and above the conditions of the design
+```{r}
+accuracy_model5 <- glm(lineupacc ~ lineuptpta + exposure + automatic,
+      family = "binomial", data = traindata)
+summary(accuracy_model5)
+accuracy_model6 <- glm(lineupacc ~ lineuptpta + exposure + facecomparison,
+      family = "binomial", data = traindata)
+summary(accuracy_model6)
+```
+Neither one of these variables adds to the model over and above the conditions of the experiment.
+_______________________________________________________________________
+Step 4: Check whether the predictive model holds true for the test data
+```{r}
+accuracy_model7 <- glm(lineupacc ~ lineuptpta + exposure,
+      family = "binomial", data = testdata)
+summary(accuracy_model7)
+```
+The model above confirms our findings in the training data set. Both the absence/presence of a target and the length of initial exposure to the target are significantly predictive of lineup accuracy. If the target is present, the participant is significantly more likely to respond inaccurately than if the target is absent. Furthermore, if the initial exposure is short, the participant is significantly more likely to respond inaccurately than if the initial exposure is long.
+In conclusion: 1)Eye witnesses are more sucessful at correctly rejecting a lineup that doesnt contain the perpetrator, than they are at correctly identifying a perpetrator in a lineup where they are present. 2) Eye witnesses are more accurate when they have had a longer initial exposure (90s) to the perpetrator (i.e. during the crime), than they are if the initial exposure is very short (3s)
+___________________________________________________________________________-
+Question 5:
+i) What is the probability that someone who is > 80% confident is accurate?
+```{r}
+accuracy_model8 <- glm(lineupacc ~ confidence,
+      family = "binomial", data = traindata)
+summary(accuracy_model8)
+predict(accuracy_model8, 
+        data.frame(confidence = 80), type = "response")
+```
+There is a 63% chance that someone who is > 80% confident is accurate
 
+ii) What are the odds that someone who is >80% confident is accurate?
+```{r}
+x <- predict(accuracy_model8, 
+        data.frame(confidence = 80), type = "response")
+odds <- x/(1-x)
+print(odds)
+```
+The odds of them being correct is 1.73
 
+iii) What is the partial odds ratio in the relation between lineuptpta and accuracy of decision
+```{r}
+accuracy_model9 <- glm(lineupacc ~ lineuptpta + confidence,
+      family = "binomial", data = traindata)
+summary(accuracy_model9)
+```
+To convert partial logit to partial odds:
+e^(-1.048236) = 0.35055558407 (partial odds)
+
+b) Assess accuracy of model with confusion matrix
 ```{r}
 
+```
+
+```{r}
+chdmodel1 <- glm(chd ~ tobacco, 
+                 family = "binomial", data = saheart)
+summary(chdmodel1)
+predict(chdmodel1, 
+        data.frame(tobacco = 30)) # logit
+predict(chdmodel1, 
+        data.frame(tobacco = 30), type = "response") # probability
+x <- predict(chdmodel1, 
+        data.frame(tobacco = 30), type="response")
+odds <- x/(1-x)  # to get the answer in odds
+print(odds)
+
+predict(chdmodel1, 
+        data.frame(tobacco = 19)) # logit
+predict(chdmodel1, 
+        data.frame(tobacco = 19), type = "response") # probability
+x <- predict(chdmodel1, 
+             data.frame(tobacco = 19), type="response")
+odds <- x/(1-x)  # to get the answer in odds
+print(odds)
 ```
 
 ```{r}
