@@ -49,4 +49,11 @@ ggplot(data = traindata, mapping = aes(x = lineuprt_log, y = lineupacc))+
   geom_smooth()+
   facet_wrap(~lineuptpta)
 ```
+Step 6: Test whether confidence of response (confidence) is predictive of lineup accuracy (lineupacc), faceted by whether the target is present (TP), or absent (TA)(lineuptpta)
+```{r}
+ggplot(data = traindata, mapping = aes(x = confidence, y = lineupacc))+
+  geom_jitter(alpha = 0.2)+
+  geom_smooth()+
+  facet_wrap(~lineuptpta)
+```
 
