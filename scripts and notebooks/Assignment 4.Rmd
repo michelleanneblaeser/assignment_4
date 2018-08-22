@@ -8,12 +8,35 @@ Load the training (2014) and test (2015) data sets
 load("../data/eye_FR_testdata-1")
 load("../data/eye_FR_traindata-1")
 ```
-Load tidyverse and Magrittr
+Load tidyverse, Magrittr, Psych, and vcd
 ```{r}
 library(tidyverse)
 library(magrittr)
+install.packages("psych")
+library(psych)
+install.packages("vcd")
+library(vcd)
 ```
-Step 1: Investigate the distribution of continuous variables in training data
+Step 1: Describe eyewitness accuracy (lineupacc) in training data set
+```{r}
+traindata %>%  
+    describe     
+table(traindata$lineupacc)
+```
+From the second table above - note that of 117 participants, 55 people were incorrect in their response (false positives + false negatives), and 66 people were correct in their response (correct identification in a target present lineup, and correct rejection in a target absent lineup)
+From the first table above:
+"Particip" can be ignored - this is just the participant number
+"Lineuptpta" refers to whether the lineup featured a target that was present in the simulated crime (TP = target present), or did not feature a target that was present in the simulated crime (TA = target absent). A value of 1 represents a target absent lineup, and a value of 2 represents a target present lineup. As the mean value is 1.5 - There were an (almost) equal number of target present and target absent conditions
+"Lineupacc" refers to whether the participant gave a correct response (defined above; assigned a value of 1), or an incorrect response (defined above; assigned a value of 0). With a mean of 0.53, just over half of the participants were correct in their response
+"Exposure" refers to the length of time the participant was exposed to the video of the simulated crime. Short exposure is a video of about 3 seconds (assigned a value of 2), and long exposure is a video of about 90 seconds (assigned a value of 1). The mean value is 1.5, indicating that (about) half of the participants had long exposure, while the other half had short exposure
+"Confidence" refers to a self-rated scale of how confident the participant was that they had made the correct decision (defined above) on a scale ranging from 0 - 100. For this measure, there is missing data for 3 cases. Skewness and kurtosis statistics are in the acceptable range, suggesting a normal disttribution of data across this continuous variable. Participant responses spanned the full range of the scale (0-100), the mean is 55.77 (just over the half way mark), and the standard deviation is 31.59.
+"Lineuprt" refers to lineup response time - the time (in milliseconds) that participants took before making a decision on whether the target was present or absent in the lineup. Response times ranged from 5009ms to 124143ms, which is a large range.The mean response time was 28423.79ms - well below the midpoint of the range.  The standard deviation is 22795.90ms - which means that 95% of the response times were below 74015.59ms (well below the max value of the range), and 99.7% of the response times were below 96811.49ms.
+In light of the maximum value being 124143ms - this is suggestive that there may be outliers on the high end of the range.
+Skewness and kurtosis statistics further suggest a non-normal distribution. This distribution will first be examined graphically - if it proves to be a non-normal distribution, a log10 transformation will be performed. If this does not correct the problem, outliers with values further than 3 standard deviations from the mean may need to be removed. 
+"Automatic" refers to a self report measure - participants were asked to indicate whether they made their decision automatically or after much deliberation, on a scale from 1 to 5. It is unclear what these values represent.
+"Facecomparison" refers to a self report measure - participants were asked if they rejected the lineup because the people in the lineup did not look like the target, on a scale from 1 to 5. It is unclear what these values represent.
+____________________________________________________________________________
+Step 1: Graphically investigate the distribution of continuous variables in training data
 Graph 1: Confidence (confidence)
 Graph 2: Response time (lineuprt)
 ```{r}
@@ -25,35 +48,56 @@ ggplot(data = traindata, mapping = aes(x = lineuprt))+
 
   
 ```
-Step 2:
-Test whether lineup response time (lineuprt) is predictive of eyewitness accuracy(lineupacc), faceted by whether the target is present (TP) or absent (TA)(linuptpta)
-```{r}
-ggplot(data = traindata, mapping = aes(x = lineuprt, y = lineupacc))+
-  geom_jitter(alpha = 0.2)+
-  geom_smooth()+
-  facet_wrap(~lineuptpta)
-```
-Step 3: transform response time (lineuprt) to correct for the skew
+Step 2: Transform response time (lineuprt) to correct for the skew
 ```{r}
 lineuprt_log <- (log10(traindata$lineuprt))
 ```
-Step 4: Investigate distribution for log10 transformation of response time (lineuprt_log)
+Step 3: Investigate distribution for log10 transformation of response time (lineuprt_log)
 ```{r}
+describe(lineuprt_log) 
 ggplot(data = traindata, mapping = aes(x = lineuprt_log))+
   geom_histogram()
 ```
-Step 5: Retest whether the transformed lineup response time (lineuprt_log) is predictive of eyewitness accuracy(lineupacc), faceted by whether the target is present (TP) or absent (TA)(linuptpta)
+Table 1 indicates that the unacceptable levels of skewness and kurtosis have been resolved with a log10 transformation. Graph 1 confirms this, although it appears there are still some outliers.
+____________________________________________________________________________
+Step 4: Test whether 1)confidence of response (confidence) is predictive of lineup accuracy (lineupacc), and 2)the transformed lineup response time (lineuprt_log) is predictive of eyewitness accuracy(lineupacc)
 ```{r}
-ggplot(data = traindata, mapping = aes(x = lineuprt_log, y = lineupacc))+
-  geom_jitter(alpha = 0.2)+
-  geom_smooth()+
-  facet_wrap(~lineuptpta)
+ggplot(traindata, aes(x = confidence, y = lineupacc))+
+  geom_point()+
+    geom_jitter(height = .1, alpha = 0.3)+
+    geom_smooth(method = "glm",
+                se = F)
+
+ggplot(traindata, aes(x = lineuprt_log, y = lineupacc))+
+  geom_point()+
+    geom_jitter(height = .1, alpha = 0.3)+
+    geom_smooth(method = "glm",
+                se = F)
+
 ```
-Step 6: Test whether confidence of response (confidence) is predictive of lineup accuracy (lineupacc), faceted by whether the target is present (TP), or absent (TA)(lineuptpta)
+Graph 1 suggestss that the more confident a participant is in their response, the more likely it is that they have given a correct reponse.
+Graph 2 sugests that the longer it takes a participant to give a response, the less likely it is that they have given a correct response.
+
+
+
+
+
+
 ```{r}
-ggplot(data = traindata, mapping = aes(x = confidence, y = lineupacc))+
-  geom_jitter(alpha = 0.2)+
-  geom_smooth()+
-  facet_wrap(~lineuptpta)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+
+```{r}
+
 ```
 
